@@ -1,0 +1,274 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f7f6;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden; /* Prevent body scroll when sidebar is long */
+}
+
+header {
+    background-color: #d9232d; /* McGill Red */
+    color: white;
+    padding: 15px 30px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+header h1 {
+    margin: 0 0 10px 0;
+    font-size: 1.8em;
+}
+
+.controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.controls label {
+    font-weight: 500;
+}
+
+.controls select,
+.controls input[type="text"],
+.controls button {
+    padding: 8px 12px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-size: 0.9em;
+}
+
+.controls select {
+    min-width: 200px;
+}
+
+.controls input[type="text"] {
+    min-width: 250px;
+}
+
+.controls button {
+    background-color: #ac1c24; /* Darker McGill Red */
+    color: white;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.2s ease;
+}
+
+.controls button:hover {
+    background-color: #8a161c;
+}
+
+main {
+    display: flex;
+    flex-grow: 1;
+    position: relative; /* For sidebar positioning */
+    overflow: hidden; /* Prevent main from overflowing */
+}
+
+#course-graph {
+    flex-grow: 1;
+    height: 100%;
+    background-color: #ffffff;
+}
+
+#course-sidebar {
+    width: 350px;
+    min-width: 300px;
+    max-width: 40%;
+    background-color: #fff;
+    border-left: 1px solid #ddd;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+    position: fixed; /* Changed from absolute for better context */
+    right: 0;
+    top: 0; /* Align with top of viewport */
+    bottom: 0; /* Align with bottom of viewport */
+    height: 100vh; /* Full viewport height */
+    padding: 20px;
+    box-sizing: border-box;
+    overflow-y: auto;
+    transition: transform 0.3s ease-in-out;
+    transform: translateX(100%); /* Start hidden off-screen */
+    z-index: 1000;
+}
+
+#course-sidebar.visible {
+    transform: translateX(0);
+}
+
+#course-sidebar.hidden {
+    transform: translateX(100%);
+}
+
+#close-sidebar {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    cursor: pointer;
+    color: #777;
+}
+
+#close-sidebar:hover {
+    color: #333;
+}
+
+#sidebar-content h2 {
+    margin-top: 10px;
+    font-size: 1.4em;
+    color: #d9232d;
+}
+
+#sidebar-content h3 {
+    font-size: 1.1em;
+    color: #333;
+    margin-top: 15px;
+    margin-bottom: 5px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 3px;
+}
+
+#sidebar-content p,
+#sidebar-content ul {
+    font-size: 0.9em;
+    line-height: 1.6;
+    color: #555;
+}
+
+#sidebar-content ul {
+    padding-left: 20px;
+    list-style-type: square;
+}
+
+#sidebar-content .raw-reqs {
+    font-family: 'Courier New', Courier, monospace;
+    background-color: #f0f0f0;
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    white-space: pre-wrap; /* Preserve whitespace and wrap */
+    word-break: break-all;
+}
+
+/* Common Search Container Styles */
+.program-search-container,
+.category-search-wrapper {
+    position: relative; /* For positioning the suggestions box */
+    display: inline-block; /* Or 'block' if you want it on its own line */
+}
+
+/* Program Search Specific Styles */
+
+
+#program-search-input {
+    color: #333333; /* Dark grey for typed text */
+    /* Inherits styles from .controls input[type="text"] which is good */
+    /* Add any specific overrides if needed, e.g., width */
+    min-width: 220px; /* Adjust as needed */
+}
+
+.suggestions-container {
+    display: none; /* Hidden by default */
+    position: absolute;
+    border: 1px solid #ddd;
+    background-color: white;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1001; /* Ensure it's above the graph but below modals if any */
+}
+
+.suggestions-container div {
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+    color: #333333; /* Ensure suggestion text is visible */
+}
+
+.suggestions-container div:last-child {
+    border-bottom: none;
+}
+
+.suggestions-container div:hover {
+    background-color: #f0f0f0;
+}
+
+#category-search-input {
+    color: #333333; /* Dark grey for typed text */
+    min-width: 180px; /* Adjust as needed */
+}
+
+#graph-container {
+    position: relative; /* Needed for absolute positioning of the loading indicator */
+    flex-grow: 1; /* Allow it to take available horizontal space in main */
+    height: 100%; /* Allow it to take available vertical space in main */
+    display: flex; /* To allow #course-graph to use flex-grow within it if needed */
+}
+
+#loading-indicator {
+    position: absolute;
+    display: flex; /* Use flex to align spinner and text */
+    flex-direction: column; /* Stack spinner and text vertically */
+    align-items: center; /* Center items horizontally */
+    justify-content: center; /* Center items vertically */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    z-index: 1000; /* Ensure it's on top */
+    font-size: 1.2em;
+    color: #333;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(0, 0, 0, 0.1); /* Lighter track for the spinner on a light background */
+    border-left-color: #d9232d; /* McGill Red for the active part of the spinner */
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px; /* Space between spinner and text */
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Vis.js specific styling if needed */
+.vis-network:focus {
+    outline: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    header h1 {
+        font-size: 1.5em;
+    }
+    .controls {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .controls select,
+    .controls input[type="text"],
+    .controls button {
+        width: 90%;
+        max-width: 300px;
+    }
+    #course-sidebar {
+        width: 80%;
+        max-width: none;
+        border-left: none;
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    }
+}
