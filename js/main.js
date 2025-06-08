@@ -272,29 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function extractGroup(courseCode) {
         const prefix = courseCode.split('-')[0];
-        const facultyMap = {
-            'ACCT': 'Management', 'ADR1': 'Interfaculty Studies', 'AEBI': 'Agricultural & Environmental Sciences', 'AECH': 'Agricultural & Environmental Sciences', 'AEHM': 'Agricultural & Environmental Sciences', 'AEMA': 'Agricultural & Environmental Sciences', 'AEMC': 'Agricultural & Environmental Sciences',
-            'AEPH': 'Agricultural & Environmental Sciences', 'AERO': 'Engineering', 'AESC': 'Agricultural & Environmental Sciences', 'AFSC': 'Agricultural & Environmental Sciences', 'AGEC': 'Agricultural & Environmental Sciences', 'AGRI': 'Agricultural & Environmental Sciences',
-            'ANAT': 'Medicine and Health Sciences', 'ANSC': 'Agricultural & Environmental Sciences', 'ANTH': 'Arts', 'APPI': 'Interfaculty Studies', 'ARAB': 'Arts', 'ARCH': 'Engineering', 'ARTH': 'Arts', 'ARTS': 'Arts',
-            'ASIA': 'Arts', 'ASPL': 'Arts', 'ATOC': 'Science', 'BABS': 'Interfaculty Studies', 'BASC': 'Interfaculty Studies', 'BIEN': 'Engineering', 'BIOC': 'Medicine and Health Sciences', 'BIOL': 'Science', 'BIOT': 'Science', 'BREE': 'Agricultural & Environmental Sciences',
-            'BTEC': 'Agricultural & Environmental Sciences', 'BUS1': 'Management', 'BUS2': 'Management', 'BUSA': 'Management', 'CANS': 'Arts', 'CATH': 'Arts', 'CEAP': 'Education', 'CCOM': 'Arts', 'CHEM': 'Science', 'CHEE': 'Engineering', 'CHIN': 'Arts',
-            'CIVE': 'Engineering', 'CLAS': 'Arts', 'CMEP': 'Interfaculty Studies', 'COMS': 'Arts', 'COMP': 'Science', 'CRIM': 'Interfaculty Studies', 'CSUS': 'Arts', 'DESR': 'Interfaculty Studies', 'EAST': 'Arts', 'ECCE': 'Education', 'ECED': 'Education',
-            'ECON': 'Arts', 'ECSE': 'Engineering', 'EDEC': 'Education', 'EDEM': 'Education', 'EDER': 'Education', 'EDES': 'Education', 'EDFC': 'Education', 'EDFE': 'Education', 'EDFM': 'Education', 'EDFX': 'Education', 'EDGC': 'Education',
-            'EDIN': 'Education', 'EDKP': 'Education', 'EDPC': 'Education', 'EDPE': 'Education', 'EDPH': 'Education', 'EDPI': 'Education', 'EDPL': 'Education', 'EDPT': 'Education', 'EDSL': 'Education', 'EDSP': 'Education', 'EDTL': 'Education',
-            'ENGL': 'Arts', 'ENGR': 'Engineering', 'ENVR': 'Science', 'EPSC': 'Science', 'ESYS': 'Science', 'EXCI': 'Medicine and Health Sciences', 'EXMD': 'Medicine and Health Sciences', 'EXSU': 'Medicine and Health Sciences', 'FACC': 'Interfaculty Studies', 'FDSC': 'Agricultural & Environmental Sciences',
-            'FEMA': 'Interfaculty Studies', 'FGSB': 'Interfaculty Studies', 'FINE': 'Management', 'FMED': 'Medicine and Health Sciences', 'FREN': 'Arts', 'FSCI': 'Interfaculty Studies', 'GEOG': 'Arts', 'GERM': 'Arts', 'GSFS': 'Arts', 'HISP': 'Arts',
-            'HIST': 'Arts', 'HGEN': 'Medicine and Health Sciences', 'HISP': 'Arts', 'HIST': 'Arts', 'HNDS': 'Interfaculty Studies', 'HONR': 'Interfaculty Studies', 'HSEL': 'Interfaculty Studies', 'INDG': 'Arts', 'INDR': 'Management', 'INFS': 'Arts', 'INTG': 'Management',
-            'ISLA': 'Arts', 'ITAL': 'Arts', 'JAPN': 'Arts', 'JEWJ': 'Arts', 'JWST': 'Arts', 'KORN': 'Arts', 'LANG': 'Arts', 'LATN': 'Arts', 'LAW1': 'Law', 'LAW2': 'Law', 'LAW3': 'Law', 'LAW4': 'Law', 'LAW5': 'Law', 'LAW6': 'Law', 'LAW7': 'Law',
-            'LCOX': 'Interfaculty Studies', 'LEEL': 'Law', 'LING': 'Arts', 'LLCU': 'Arts', 'MATH': 'Science', 'MDPH': 'Medicine and Health Sciences', 'MECH': 'Engineering', 'MGCR': 'Management', 'MGHR': 'Management', 'MGIS': 'Management', 'MGOP': 'Management',
-            'MGSB': 'Management', 'MGSC': 'Management', 'MGTO': 'Management', 'MICT': 'Medicine and Health Sciences', 'MIMM': 'Medicine and Health Sciences', 'MIME': 'Engineering', 'MRKT': 'Management', 'MUAR': 'Music', 'MUGS': 'Music', 'MUHL': 'Music', 'MUIT': 'Music',
-            'MUMT': 'Music', 'MUPE': 'Music', 'MUSP': 'Music', 'MUTH': 'Music', 'NEUR': 'Science', 'NRS1': 'Medicine and Health Sciences', 'NRS2': 'Medicine and Health Sciences', 'NUR1': 'Medicine and Health Sciences', 'NUR2': 'Medicine and Health Sciences', 'NUTR': 'Agricultural & Environmental Sciences',
-            'OCC1': 'Medicine and Health Sciences', 'OCC2': 'Medicine and Health Sciences', 'OCC3': 'Medicine and Health Sciences', 'OPHL': 'Medicine and Health Sciences', 'ORGB': 'Management', 'OTOL': 'Medicine and Health Sciences', 'PARA': 'Medicine and Health Sciences', 'PATH': 'Medicine and Health Sciences',
-            'PHAR': 'Medicine and Health Sciences', 'PHIL': 'Arts', 'PHGY': 'Medicine and Health Sciences', 'PHYS': 'Science', 'PLNT': 'Agricultural & Environmental Sciences', 'POLI': 'Arts', 'POTH': 'Medicine and Health Sciences', 'PPHS': 'Medicine and Health Sciences',
-            'PRAC': 'Interfaculty Studies', 'PROG': 'Interfaculty Studies', 'PSYC': 'Arts', 'PSYT': 'Medicine and Health Sciences', 'PTSC': 'Interfaculty Studies', 'RELG': 'Arts', 'RMED': 'Medicine and Health Sciences', 'RUSS': 'Arts', 'SCSD': 'Medicine and Health Sciences',
-            'SOCI': 'Arts', 'SOIL': 'Agricultural & Environmental Sciences', 'SPAN': 'Arts', 'STAT': 'Science', 'SURG': 'Medicine and Health Sciences', 'SUST': 'Interfaculty Studies', 'TESL': 'Education', 'TESP': 'Education', 'TETH': 'Education', 'URBP': 'Engineering',
-            'WILD': 'Agricultural & Environmental Sciences', 'WMST': 'Arts', 'WOOD': 'Agricultural & Environmental Sciences', 'YANT': 'Arts', 'YHIS': 'Arts', 'YPOL': 'Arts', 'YSOC': 'Arts'
-        };
-        return facultyMap[prefix] || prefix;
+        return prefix;
     }
 
     // Get all relevant course codes for a given set of program courses (including all dependencies)
