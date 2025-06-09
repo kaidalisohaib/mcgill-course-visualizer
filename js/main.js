@@ -1,5 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const DIMMED_OPACITY = 0.1;
+  const DIMMED_OPACITY = 0.1; // Original dimming
+  const VERY_DIMMED_OPACITY = 0.05; // For stronger dimming effect
+  const DIMMED_TEXT_COLOR = '#cccccc'; // Original dimmed text color
+  const VERY_DIMMED_TEXT_COLOR = '#d9d9d9'; // Lighter for stronger dimming
+  const DEFAULT_NODE_TEXT_COLOR = '#333333'; // Standard dark gray for node text
   // Define edge color constants
   const DIM_PREREQ_COLOR = {
     color: "rgba(41, 128, 185, 0.15)",
@@ -46,6 +50,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let allNodesDataSet = new vis.DataSet(); // Use Vis DataSet for dynamic updates
   let allEdgesDataSet = new vis.DataSet(); // Use Vis DataSet for dynamic updates
   let allUniqueCategories = null;
+  let selectedForHighlighting_NodeIds = new Set(); // For cumulative highlighting
 
   const COURSES_JSON_PATH = "data/mcgill_courses_processed.json";
   const PROGRAMS_JSON_PATH = "data/programs_and_courses.json";
@@ -145,19 +150,30 @@ document.addEventListener("DOMContentLoaded", () => {
       let newOpacity = normalOpacity;
       if (selectedCategory === "all") {
         newOpacity = normalOpacity;
+        if (nodeGroupConfig && nodeGroupConfig.font && nodeGroupConfig.font.color) {
+          newFontColor = nodeGroupConfig.font.color; // Use group-specific color if defined
+        } else {
+          // Otherwise, use the global default node text color
+          newFontColor = (network && network.options && network.options.nodes && network.options.nodes.font && network.options.nodes.font.color) ? network.options.nodes.font.color : DEFAULT_NODE_TEXT_COLOR;
+        }
       } else {
         // Check if the node's group matches the selected category.
         // The 'group' property is set in addRequirementGraphElements and generateGraphElements.
         if (node.group === selectedCategory) {
           newOpacity = normalOpacity;
+          if (nodeGroupConfig && nodeGroupConfig.font && nodeGroupConfig.font.color) {
+            newFontColor = nodeGroupConfig.font.color; // Use group-specific color
+          } else {
+            newFontColor = (network && network.options && network.options.nodes && network.options.nodes.font && network.options.nodes.font.color) ? network.options.nodes.font.color : DEFAULT_NODE_TEXT_COLOR;
+          }
         } else {
           newOpacity = dimOpacity;
+          newFontColor = DIMMED_TEXT_COLOR;
         }
       }
-      // Only update if opacity actually changes to avoid unnecessary updates
-      if (node.opacity !== newOpacity) {
-        nodesToUpdate.push({ id: node.id, opacity: newOpacity });
-      }
+      fontProperties.color = newFontColor; // Set the determined color
+
+      nodesToUpdate.push({ id: node.id, opacity: newOpacity, font: fontProperties });
     });
 
     if (nodesToUpdate.length > 0) {
@@ -761,6 +777,7 @@ document.addEventListener("DOMContentLoaded", () => {
         network.stabilize(); // Stabilize if physics is on
         network.once("stabilizationIterationsDone", function () {
           network.fit(); // Fit after stabilization
+          network.setOptions({ physics: false }); // Disable physics after layout is done
         });
       } else {
         network.fit(); // Fit directly if physics is off
@@ -775,7 +792,7 @@ document.addEventListener("DOMContentLoaded", () => {
       nodes: {
         shape: "box",
         margin: 10,
-        font: { size: 12, face: "Arial" },
+        font: { size: 12, face: "Arial", bold: true, color: "#333", strokeWidth: 1, strokeColor: "#333" }, // Default bold and dark text
         borderWidth: 1,
         shadow: true,
       },
@@ -795,18 +812,25 @@ document.addEventListener("DOMContentLoaded", () => {
         keyboard: true,
       },
       physics: {
-        enabled: true,
-        barnesHut: {
-          gravitationalConstant: -3000, // Moderately reduced repulsion
-          centralGravity: 0.2, // Increased attraction to the center
-          springLength: 120, // Ideal length of an edge
-          springConstant: 0.05, // Stiffness of the edges
-          damping: 0.09, // Reduces oscillations
-          avoidOverlap: 0.1, // Prevents nodes from overlapping too much
+        enabled: true, // Set to false by default, enable temporarily for layout
+        // barnesHut: {
+        //   gravitationalConstant: -3000, // Moderately reduced repulsion
+        //   centralGravity: 0.2, // Increased attraction to the center
+        //   springLength: 120, // Ideal length of an edge
+        //   springConstant: 0.05, // Stiffness of the edges
+        //   damping: 0.09, // Reduces oscillations
+        //   avoidOverlap: 0.1, // Prevents nodes from overlapping too much
+        // },
+        "forceAtlast2Based": {
+          "gravitationalConstant": -200,
+          "springLength": 400,
+          "springConstant": 0.36,
+          "avoidOverlap": 1
         },
-        solver: "barnesHut", // Good for larger networks and clustering
+
+        solver: "forceAtlas2Based", // Good for larger networks and clustering
         stabilization: {
-          iterations: 1000,
+          iterations: 10000,
           fit: true,
         },
       },
@@ -817,21 +841,21 @@ document.addEventListener("DOMContentLoaded", () => {
         Management: { color: { background: "#FFB6C1", border: "#E6A3AD" } },  // LightPink
         Medicine: { color: { background: "#D8BFD8", border: "#C1ACC1" } },    // Thistle
         Neuroscience: { color: { background: "#AFEEEE", border: "#9CDADA" } },// PaleTurquoise (for prefix-based Neuroscience)
-        // Cognitive Science Program Specific Groups (Updated Colors for better contrast)
-        "CogSci Program: Required":           { color: { background: '#FF9AA2', border: '#E68B92' } }, // Salmon Pink
-        "CogSci Program: Core Logic":         { color: { background: '#FFDAC1', border: '#E6C4AE' } }, // Peach
-        "CogSci Program: Core Statistics":    { color: { background: '#FFFDC1', border: '#E6E3AE' } }, // Pale Yellow
-        "CogSci Program: Core CompSci":       { color: { background: '#C1FFD7', border: '#AEE6C0' } }, // Mint Cream
-        "CogSci Program: Core Linguistics":   { color: { background: '#A0E7E5', border: '#90D0CE' } }, // Light Turquoise
-        "CogSci Program: Core Philosophy":    { color: { background: '#D7BDE2', border: '#C0A9CA' } }, // Lavender (more saturated)
-        "CogSci Program: Core Neuroscience":  { color: { background: '#FFC0CB', border: '#E6ADB7' } }, // Pink (classic)
-        "CogSci Program: Core Psychology":    { color: { background: '#B0E0E6', border: '#9DC8D2' } }, // Powder Blue
-        "CogSci Program: Comp CompSci":       { color: { background: '#FFB7B2', border: '#E6A4A0' } }, // Light Coral
-        "CogSci Program: Comp Linguistics":   { color: { background: '#B2DFDB', border: '#A0C8C4' } }, // Pale Aqua
-        "CogSci Program: Comp Neuroscience":  { color: { background: '#F4C2C2', border: '#DBAEAE' } }, // Baby Pink
-        "CogSci Program: Comp Philosophy":    { color: { background: '#FFE4B5', border: '#E6CDA2' } }, // Moccasin
-        "CogSci Program: Comp Psychology":    { color: { background: '#CBC3E3', border: '#B7AEDA' } }, // Periwinkle
-        "CogSci Program: Research Course":    { color: { background: '#C0C0C0', border: '#A9A9A9' } }, // Silver
+        // Cognitive Science Program Specific Groups (Lighter, Distinct Colors, Bold Text)
+        "CogSci Program: Required": { color: { background: '#FF6B6B', border: '#E65A5A' }, font: { size: 12, face: 'Arial', bold: true } }, // Vibrant Red/Pink
+        "CogSci Program: Core Logic": { color: { background: '#FFD166', border: '#E6BB5A' }, font: { size: 12, face: 'Arial', bold: true } }, // Sunny Yellow/Orange
+        "CogSci Program: Core Statistics": { color: { background: '#06D6A0', border: '#05BF8F' }, font: { size: 12, face: 'Arial', bold: true } }, // Bright Teal/Green
+        "CogSci Program: Core CompSci": { color: { background: '#118AB2', border: '#0F799F' }, font: { size: 12, face: 'Arial', bold: true } }, // Strong Blue
+        "CogSci Program: Core Linguistics": { color: { background: '#EF476F', border: '#D63F63' }, font: { size: 12, face: 'Arial', bold: true } }, // Bright Pink/Magenta
+        "CogSci Program: Core Philosophy": { color: { background: '#7F5AF0', border: '#714FE6' }, font: { size: 12, face: 'Arial', bold: true } }, // Vivid Purple
+        "CogSci Program: Core Neuroscience": { color: { background: '#07BEB8', border: '#06AAB4' }, font: { size: 12, face: 'Arial', bold: true } }, // Another Teal
+        "CogSci Program: Core Psychology": { color: { background: '#FF9F1C', border: '#E68F19' }, font: { size: 12, face: 'Arial', bold: true } }, // Bright Orange
+        "CogSci Program: Comp CompSci": { color: { background: '#5EAAA8', border: '#549997' }, font: { size: 12, face: 'Arial', bold: true } }, // Muted Teal Blue
+        "CogSci Program: Comp Linguistics": { color: { background: '#A3D2CA', border: '#92BEB8' }, font: { size: 12, face: 'Arial', bold: true } }, // Light Teal/Aqua
+        "CogSci Program: Comp Neuroscience": { color: { background: '#F0A6CA', border: '#D895B6' }, font: { size: 12, face: 'Arial', bold: true } }, // Pastel Pink/Mauve
+        "CogSci Program: Comp Philosophy": { color: { background: '#F9C784', border: '#E0B376' }, font: { size: 12, face: 'Arial', bold: true } }, // Light Orange/Peach
+        "CogSci Program: Comp Psychology": { color: { background: '#8EE4AF', border: '#7FCD9D' }, font: { size: 12, face: 'Arial', bold: true } }, // Light Mint Green
+        "CogSci Program: Research Course": { color: { background: '#BDBDBD', border: '#AAAAAA' }, font: { size: 12, face: 'Arial', bold: true } }, // Medium Grey
         AndNode: {
           shape: "diamond",
           size: 10,
@@ -955,68 +979,124 @@ document.addEventListener("DOMContentLoaded", () => {
   function handleNetworkClick(params) {
     const clickedNodeId = params.nodes.length > 0 ? params.nodes[0] : null;
 
+    // 1. Update sidebar and manage selected set for highlighting
     if (clickedNodeId) {
       const course = coursesData.find((c) => c.code === clickedNodeId);
       if (course) updateSidebar(course);
+      selectedForHighlighting_NodeIds.add(clickedNodeId);
+    } else {
+      // Background click: clear all selections
+      selectedForHighlighting_NodeIds.clear();
     }
-    // No 'else hideSidebar()' here, sidebar visibility is managed by its own button and program changes.
 
-    // Update edge colors based on click
-    const edgesToUpdate = allEdgesDataSet
-      .get({ returnType: "Array" })
-      .map((edge) => {
+    // 2. Determine all nodes and edges that should be fully highlighted
+    const nodesToFullyHighlight = new Set();
+    const edgesToFullyHighlight_Ids = new Set();
+
+    if (selectedForHighlighting_NodeIds.size > 0) {
+      selectedForHighlighting_NodeIds.forEach((selectedNodeId) => {
+        nodesToFullyHighlight.add(selectedNodeId); // Add the actually clicked node
+        if (network && typeof network.getConnectedNodes === "function") {
+          network
+            .getConnectedNodes(selectedNodeId)
+            .forEach((connectedNode) => nodesToFullyHighlight.add(connectedNode)); // Add its direct neighbors
+          network
+            .getConnectedEdges(selectedNodeId)
+            .forEach((edgeId) => edgesToFullyHighlight_Ids.add(edgeId)); // Add its connected edges
+        }
+      });
+    }
+
+    // 3. Update node opacities, font colors, text strokes, and borders
+    const allNodes = allNodesDataSet.get({ returnType: "Array" });
+    let nodesToUpdate = allNodes.map((node) => {
+      let newOpacity;
+      let newFontColor;
+      let newFontStrokeWidth;
+      let newNodeBorderWidth;
+
+      // --- Determine default/group specific visual properties ---
+      const defaultNodeOptions = (network && network.options && network.options.nodes) ? network.options.nodes : {};
+      const defaultFontOptions = defaultNodeOptions.font || {};
+      
+      let fontProperties = {
+        size: defaultFontOptions.size || 12,
+        face: defaultFontOptions.face || "Arial",
+        bold: defaultFontOptions.bold !== undefined ? defaultFontOptions.bold : true,
+        strokeWidth: defaultFontOptions.strokeWidth !== undefined ? defaultFontOptions.strokeWidth : 1, // Default text stroke
+        strokeColor: defaultFontOptions.strokeColor || DEFAULT_NODE_TEXT_COLOR
+      };
+      let nodeBorderWidthProperty = defaultNodeOptions.borderWidth !== undefined ? defaultNodeOptions.borderWidth : 1; // Default node border
+
+      const nodeGroupConfig = node.group && network.groups.groups && network.groups.groups[node.group] ? network.groups.groups[node.group] : null;
+      if (nodeGroupConfig) {
+        if (nodeGroupConfig.font) {
+          if (nodeGroupConfig.font.size) fontProperties.size = nodeGroupConfig.font.size;
+          if (nodeGroupConfig.font.face) fontProperties.face = nodeGroupConfig.font.face;
+          if (nodeGroupConfig.font.bold !== undefined) fontProperties.bold = nodeGroupConfig.font.bold;
+          if (nodeGroupConfig.font.strokeWidth !== undefined) fontProperties.strokeWidth = nodeGroupConfig.font.strokeWidth;
+          if (nodeGroupConfig.font.strokeColor) fontProperties.strokeColor = nodeGroupConfig.font.strokeColor;
+          if (nodeGroupConfig.font.multi !== undefined) fontProperties.multi = nodeGroupConfig.font.multi;
+          if (nodeGroupConfig.font.align !== undefined) fontProperties.align = nodeGroupConfig.font.align;
+        }
+        if (nodeGroupConfig.borderWidth !== undefined) nodeBorderWidthProperty = nodeGroupConfig.borderWidth;
+      }
+      // Initial font color from group or default, to be potentially overridden by highlight/dim logic
+      fontProperties.color = (nodeGroupConfig && nodeGroupConfig.font && nodeGroupConfig.font.color) ? nodeGroupConfig.font.color : DEFAULT_NODE_TEXT_COLOR;
+
+      // --- Apply highlighting/dimming logic ---
+      if (selectedForHighlighting_NodeIds.size === 0) { // Case 1: Nothing selected, all nodes default
+        newOpacity = 1;
+        newFontColor = fontProperties.color; // Use the determined default/group color
+        newFontStrokeWidth = fontProperties.strokeWidth; // Use default/group text stroke
+        newNodeBorderWidth = nodeBorderWidthProperty; // Use default/group node border
+      } else { // Case 2: Nodes are selected for highlighting
+        if (nodesToFullyHighlight.has(node.id)) { // This node is part of the highlighted set
+          newOpacity = 1;
+          newFontColor = fontProperties.color; // Use default/group color
+          newFontStrokeWidth = fontProperties.strokeWidth; // Use default/group text stroke
+          newNodeBorderWidth = nodeBorderWidthProperty; // Use default/group node border
+        } else { // This node is not highlighted, so it's dimmed
+          newOpacity = VERY_DIMMED_OPACITY;
+          newFontColor = VERY_DIMMED_TEXT_COLOR;
+          newFontStrokeWidth = 0; // Remove text stroke for dimmed nodes
+          newNodeBorderWidth = 0; // Remove node border for dimmed nodes
+        }
+      }
+      fontProperties.color = newFontColor;
+      fontProperties.strokeWidth = newFontStrokeWidth;
+
+      return { id: node.id, opacity: newOpacity, font: fontProperties, borderWidth: newNodeBorderWidth };
+    });
+    if (nodesToUpdate.length > 0) {
+      allNodesDataSet.update(nodesToUpdate);
+    }
+
+    // 4. Update edge colors
+    const edgesToUpdate = allEdgesDataSet.get({ returnType: "Array" }).map(
+      (edge) => {
         let newColorObj;
-        // Fallback for baseColorType if somehow missing (e.g. from very old data not cleared)
-        const baseType =
-          edge.baseColorType || (edge.dashes ? "coreq" : "prereq");
+        const baseType = edge.baseColorType || (edge.dashes ? "coreq" : "prereq");
 
         if (
-          clickedNodeId &&
-          (edge.from === clickedNodeId || edge.to === clickedNodeId)
+          selectedForHighlighting_NodeIds.size > 0 &&
+          edgesToFullyHighlight_Ids.has(edge.id)
         ) {
           newColorObj =
             baseType === "prereq"
               ? HIGHLIGHT_PREREQ_COLOR
               : HIGHLIGHT_COREQ_COLOR;
         } else {
+          // Default to DIM colors if not part of any highlight or if all selections are cleared
           newColorObj =
             baseType === "prereq" ? DIM_PREREQ_COLOR : DIM_COREQ_COLOR;
-        } // Closes the else for color assignment
-        return { id: edge.id, color: newColorObj }; // Return object with id and new color
-      }); // Closes the .map()
+        }
+        return { id: edge.id, color: newColorObj };
+      }
+    );
 
     if (edgesToUpdate.length > 0) {
       allEdgesDataSet.update(edgesToUpdate);
-    }
-
-    // Update node opacities
-    const allNodes = allNodesDataSet.get({ returnType: "Array" });
-    let nodesToUpdate = [];
-
-    if (clickedNodeId) {
-      const connectedNodes = new Set();
-      connectedNodes.add(clickedNodeId);
-      // Ensure 'network' is defined and accessible here. It should be, as it's a global.
-      if (network && typeof network.getConnectedNodes === "function") {
-        network
-          .getConnectedNodes(clickedNodeId)
-          .forEach((nodeId) => connectedNodes.add(nodeId));
-      }
-
-      allNodes.forEach((node) => {
-        const isConnected = connectedNodes.has(node.id);
-        let newOpacity = isConnected ? 1 : DIMMED_OPACITY;
-        nodesToUpdate.push({ id: node.id, opacity: newOpacity });
-      });
-    } else {
-      // No node clicked, reset all opacities
-      allNodes.forEach((node) => {
-        nodesToUpdate.push({ id: node.id, opacity: 1 });
-      });
-    }
-
-    if (nodesToUpdate.length > 0) {
-      allNodesDataSet.update(nodesToUpdate);
     }
   } // End of handleNetworkClick
 
