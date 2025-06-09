@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
+  const DIMMED_OPACITY = 0.1;
   // Define edge color constants
   const DIM_PREREQ_COLOR = {
     color: "rgba(41, 128, 185, 0.15)",
@@ -135,7 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function handleCategoryFilterChange() {
     const selectedCategory = categoryFilterSelect.value;
     const normalOpacity = 1.0;
-    const dimOpacity = 0.2; // Dim enough to see, but clearly de-emphasized
+    const dimOpacity = DIMMED_OPACITY; // Dim enough to see, but clearly de-emphasized
 
     const allGraphNodes = allNodesDataSet.get({ returnType: "Array" });
     const nodesToUpdate = [];
@@ -320,19 +321,63 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // --- Cognitive Science Program Course Categorization ---
+  const cognitiveScienceProgramMap = {};
+  // Helper to add courses, ensuring course codes use hyphens and prioritizing first-added (Core over Complementary)
+  const addCogSciCourse = (courseCodeWithSpace, categoryName) => {
+    const courseCodeWithHyphen = courseCodeWithSpace.replace(' ', '-');
+    if (!cognitiveScienceProgramMap[courseCodeWithHyphen]) {
+      cognitiveScienceProgramMap[courseCodeWithHyphen] = categoryName;
+    }
+  };
+
+  // Define categories based on the Cognitive Science Program HTML
+
+  // Required Course
+  addCogSciCourse('NSCI 201', 'CogSci Program: Required');
+
+  // Core Complementary Courses - these will be prioritized if a course appears in both core and complementary
+  ['COMP 230', 'MATH 318', 'PHIL 210'].forEach(c => addCogSciCourse(c, 'CogSci Program: Core Logic'));
+  ['MATH 203', 'MATH 323', 'PSYC 204'].forEach(c => addCogSciCourse(c, 'CogSci Program: Core Statistics'));
+  ['COMP 202', 'COMP 204', 'COMP 250'].forEach(c => addCogSciCourse(c, 'CogSci Program: Core CompSci'));
+  ['LING 201', 'LING 210', 'LING 260'].forEach(c => addCogSciCourse(c, 'CogSci Program: Core Linguistics'));
+  ['PHIL 200', 'PHIL 201', 'PHIL 221'].forEach(c => addCogSciCourse(c, 'CogSci Program: Core Philosophy'));
+  ['NSCI 200', 'PSYC 211'].forEach(c => addCogSciCourse(c, 'CogSci Program: Core Neuroscience'));
+  ['PSYC 212', 'PSYC 213'].forEach(c => addCogSciCourse(c, 'CogSci Program: Core Psychology'));
+
+  // Complementary Courses (will NOT overwrite if a course was already defined as Core due to the check in addCogSciCourse)
+  const complementaryCompSci = ['COMP 206', 'COMP 250', 'COMP 251', 'COMP 280', 'COMP 302', 'COMP 330', 'COMP 345', 'COMP 360', 'COMP 400', 'COMP 409', 'COMP 417', 'COMP 421', 'COMP 424', 'COMP 445', 'COMP 451', 'COMP 523', 'COMP 527', 'COMP 531', 'COMP 545', 'COMP 546', 'COMP 549', 'COMP 550', 'COMP 551', 'COMP 558', 'COMP 562', 'COMP 579', 'MATH 222', 'MATH 223', 'MATH 240'];
+  complementaryCompSci.forEach(c => addCogSciCourse(c, 'CogSci Program: Comp CompSci'));
+
+  // Note: The text states "Any course at the 300, 400 or 500 level from the department of Linguistics"
+  // can be taken. The array below only includes the explicitly listed 200-level courses.
+  const complementaryLinguistics = ['LING 201', 'LING 210', 'LING 260'];
+  complementaryLinguistics.forEach(c => addCogSciCourse(c, 'CogSci Program: Comp Linguistics'));
+  // To be fully compliant, a separate mechanism would be needed to check for any LING 3xx/4xx/5xx course.
+
+  const complementaryPhilosophy = ['NSCI 300', 'PHIL 306', 'PHIL 310', 'PHIL 311', 'PHIL 341', 'PHIL 354', 'PHIL 355', 'PHIL 360', 'PHIL 361', 'PHIL 367', 'PHIL 411', 'PHIL 415', 'PHIL 419', 'PHIL 421', 'PHIL 441', 'PHIL 470', 'PHIL 474'];
+  complementaryPhilosophy.forEach(c => addCogSciCourse(c, 'CogSci Program: Comp Philosophy'));
+
+  const complementaryPsychology = ['ANTH 440', 'MUMT 250', 'PSYC 204', 'PSYC 211', 'PSYC 212', 'PSYC 213', 'PSYC 301', 'PSYC 302', 'PSYC 303', 'PSYC 304', 'PSYC 305', 'PSYC 306', 'PSYC 310', 'PSYC 311', 'PSYC 315', 'PSYC 317', 'PSYC 318', 'PSYC 319', 'PSYC 340', 'PSYC 341', 'PSYC 342', 'PSYC 352', 'PSYC 403', 'PSYC 406', 'PSYC 410', 'PSYC 413', 'PSYC 415', 'PSYC 427', 'PSYC 433', 'PSYC 439', 'PSYC 443', 'PSYC 470', 'PSYC 506', 'PSYC 513', 'PSYC 514', 'PSYC 522', 'PSYC 526', 'PSYC 529', 'PSYC 531', 'PSYC 537', 'PSYC 538', 'PSYC 541', 'PSYC 545', 'PSYC 560'];
+  complementaryPsychology.forEach(c => addCogSciCourse(c, 'CogSci Program: Comp Psychology'));
+
+  const complementaryNeuroscience = ['ANAT 321', 'BIOL 200', 'BIOL 201', 'BIOL 216', 'BIOL 306', 'BIOL 307', 'BIOL 320', 'BIOL 389', 'BIOL 414', 'BIOL 506', 'BIOL 507', 'BIOL 517', 'BIOL 530', 'BIOL 532', 'BIOL 580', 'BIOL 588', 'CHEM 212', 'NEUR 310', 'NEUR 503', 'NEUR 507', 'NSCI 200', 'NSCI 300', 'PHGY 209', 'PHGY 311', 'PHGY 314', 'PHGY 556', 'PSYC 211', 'PSYC 302', 'PSYC 303', 'PSYC 306', 'PSYC 311', 'PSYC 317', 'PSYC 318', 'PSYC 342', 'PSYC 410', 'PSYC 415', 'PSYC 427', 'PSYC 433', 'PSYC 443', 'PSYC 444', 'PSYC 502', 'PSYC 506', 'PSYC 514', 'PSYC 522', 'PSYC 526', 'PSYC 529', 'PSYT 301', 'PSYT 500', 'PSYT 515'];
+  complementaryNeuroscience.forEach(c => addCogSciCourse(c, 'CogSci Program: Comp Neuroscience'));
+
+  // Research Course
+  addCogSciCourse('COGS 401', 'CogSci Program: Research Course');
+  // --- End Cognitive Science Program Course Categorization ---
+
+  // Function to extract a group/category from a course code
   function extractGroup(courseCode) {
+    // 1. Check Cognitive Science Program Map first (e.g. "COMP-202")
+    if (cognitiveScienceProgramMap.hasOwnProperty(courseCode)) {
+      return cognitiveScienceProgramMap[courseCode];
+    }
+
     const prefix = courseCode.split("-")[0];
-    const facultyMap = {
-      ANAT: "Neuroscience",
-      BIOL: "Neuroscience",
-      CHEM: "Neuroscience",
-      NEUR: "Neuroscience",
-      NSCI: "Neuroscience",
-      PHGY: "Neuroscience",
-      PSYC: "Neuroscience",
-      PSYT: "Neuroscience",
-    };
-    return facultyMap[prefix] || prefix;
+
+    return prefix;
   }
 
   // Get all relevant course codes for a given set of program courses (including all dependencies)
@@ -464,13 +509,11 @@ document.addEventListener("DOMContentLoaded", () => {
           arrows: "to",
           color: type === "prereq" ? DIM_PREREQ_COLOR : DIM_COREQ_COLOR,
           dashes: type === "coreq",
-          title: `${courseCode} ${
-            type === "prereq"
-              ? "is a prerequisite for"
-              : "is a corequisite with"
-          } ${
-            targetNodeId.startsWith("logic_") ? "a condition group for" : ""
-          } ${originalCourseCode}`,
+          title: `${courseCode} ${type === "prereq"
+            ? "is a prerequisite for"
+            : "is a corequisite with"
+            } ${targetNodeId.startsWith("logic_") ? "a condition group for" : ""
+            } ${originalCourseCode}`,
           baseColorType: type,
           id: `${courseCode}_${targetNodeId}_${type}`,
         };
@@ -506,9 +549,8 @@ document.addEventListener("DOMContentLoaded", () => {
         arrows: "to",
         color: type === "prereq" ? DIM_PREREQ_COLOR : DIM_COREQ_COLOR, // Style as per main type
         dashes: false, // Logic connections are not dashed for coreqs
-        title: `This ${operator} group is a ${type} for ${
-          targetNodeId.startsWith("logic_") ? "another condition group for" : ""
-        } ${originalCourseCode}`,
+        title: `This ${operator} group is a ${type} for ${targetNodeId.startsWith("logic_") ? "another condition group for" : ""
+          } ${originalCourseCode}`,
         baseColorType: type, // Keep base type for coloring consistency
         id: `${logicNodeId}_${targetNodeId}_${type}`,
       };
@@ -551,9 +593,8 @@ document.addEventListener("DOMContentLoaded", () => {
         arrows: "to",
         color: type === "prereq" ? DIM_PREREQ_COLOR : DIM_COREQ_COLOR,
         dashes: false, // Textual requirements are not corequisites in terms of dashing
-        title: `This textual condition is a ${type} for ${
-          targetNodeId.startsWith("logic_") ? "a condition group for" : ""
-        } ${originalCourseCode}`,
+        title: `This textual condition is a ${type} for ${targetNodeId.startsWith("logic_") ? "a condition group for" : ""
+          } ${originalCourseCode}`,
         baseColorType: type,
         id: `${textualNodeId}_${targetNodeId}_${type}`,
       };
@@ -585,9 +626,8 @@ document.addEventListener("DOMContentLoaded", () => {
           arrows: "to",
           color: type === "prereq" ? DIM_PREREQ_COLOR : DIM_COREQ_COLOR,
           dashes: false,
-          title: `This OR group (1 of list) is a ${type} for ${
-            targetNodeId.startsWith("logic_") ? "another condition for" : ""
-          } ${originalCourseCode}`,
+          title: `This OR group (1 of list) is a ${type} for ${targetNodeId.startsWith("logic_") ? "another condition for" : ""
+            } ${originalCourseCode}`,
           baseColorType: type,
           id: `${orNodeId}_${targetNodeId}_${type}`,
         };
@@ -633,11 +673,10 @@ document.addEventListener("DOMContentLoaded", () => {
           arrows: "to",
           color: type === "prereq" ? DIM_PREREQ_COLOR : DIM_COREQ_COLOR,
           dashes: false,
-          title: `This '${nodeLabel}' group is a ${type} for ${
-            targetNodeId.startsWith("logic_")
-              ? "another condition group for"
-              : ""
-          } ${originalCourseCode}`,
+          title: `This '${nodeLabel}' group is a ${type} for ${targetNodeId.startsWith("logic_")
+            ? "another condition group for"
+            : ""
+            } ${originalCourseCode}`,
           baseColorType: type,
           id: `${nOfListNodeId}_${targetNodeId}_${type}`,
         };
@@ -772,11 +811,27 @@ document.addEventListener("DOMContentLoaded", () => {
         },
       },
       groups: {
-        Engineering: { color: { background: "#f0a30a", border: "#c88708" } },
-        Science: { color: { background: "#74a8d0", border: "#5a86a9" } },
-        Arts: { color: { background: "#98c591", border: "#7ca076" } },
-        Management: { color: { background: "#f67280", border: "#c85c69" } },
-        Medicine: { color: { background: "#c06c84", border: "#a0586e" } },
+        Engineering: { color: { background: "#FFDAB9", border: "#E6C3A6" } }, // PeachPuff
+        Science: { color: { background: "#ADD8E6", border: "#9BC4D2" } },     // LightBlue
+        Arts: { color: { background: "#90EE90", border: "#82D482" } },        // LightGreen
+        Management: { color: { background: "#FFB6C1", border: "#E6A3AD" } },  // LightPink
+        Medicine: { color: { background: "#D8BFD8", border: "#C1ACC1" } },    // Thistle
+        Neuroscience: { color: { background: "#AFEEEE", border: "#9CDADA" } },// PaleTurquoise (for prefix-based Neuroscience)
+        // Cognitive Science Program Specific Groups (Updated Colors for better contrast)
+        "CogSci Program: Required":           { color: { background: '#FF9AA2', border: '#E68B92' } }, // Salmon Pink
+        "CogSci Program: Core Logic":         { color: { background: '#FFDAC1', border: '#E6C4AE' } }, // Peach
+        "CogSci Program: Core Statistics":    { color: { background: '#FFFDC1', border: '#E6E3AE' } }, // Pale Yellow
+        "CogSci Program: Core CompSci":       { color: { background: '#C1FFD7', border: '#AEE6C0' } }, // Mint Cream
+        "CogSci Program: Core Linguistics":   { color: { background: '#A0E7E5', border: '#90D0CE' } }, // Light Turquoise
+        "CogSci Program: Core Philosophy":    { color: { background: '#D7BDE2', border: '#C0A9CA' } }, // Lavender (more saturated)
+        "CogSci Program: Core Neuroscience":  { color: { background: '#FFC0CB', border: '#E6ADB7' } }, // Pink (classic)
+        "CogSci Program: Core Psychology":    { color: { background: '#B0E0E6', border: '#9DC8D2' } }, // Powder Blue
+        "CogSci Program: Comp CompSci":       { color: { background: '#FFB7B2', border: '#E6A4A0' } }, // Light Coral
+        "CogSci Program: Comp Linguistics":   { color: { background: '#B2DFDB', border: '#A0C8C4' } }, // Pale Aqua
+        "CogSci Program: Comp Neuroscience":  { color: { background: '#F4C2C2', border: '#DBAEAE' } }, // Baby Pink
+        "CogSci Program: Comp Philosophy":    { color: { background: '#FFE4B5', border: '#E6CDA2' } }, // Moccasin
+        "CogSci Program: Comp Psychology":    { color: { background: '#CBC3E3', border: '#B7AEDA' } }, // Periwinkle
+        "CogSci Program: Research Course":    { color: { background: '#C0C0C0', border: '#A9A9A9' } }, // Silver
         AndNode: {
           shape: "diamond",
           size: 10,
@@ -950,7 +1005,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       allNodes.forEach((node) => {
         const isConnected = connectedNodes.has(node.id);
-        let newOpacity = isConnected ? 1 : 0.2;
+        let newOpacity = isConnected ? 1 : DIMMED_OPACITY;
         nodesToUpdate.push({ id: node.id, opacity: newOpacity });
       });
     } else {
