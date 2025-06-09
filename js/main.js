@@ -2,7 +2,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const DIMMED_OPACITY = 0.1; // Original dimming
   const VERY_DIMMED_OPACITY = 0.05; // For stronger dimming effect
   const DIMMED_TEXT_COLOR = '#cccccc'; // Original dimmed text color
-  const VERY_DIMMED_TEXT_COLOR = '#d9d9d9'; // Lighter for stronger dimming
+  const VERY_DIMMED_TEXT_COLOR = '#d9d9d9'; // For very dimmed node text
+  const VERY_DIMMED_EDGE_OPACITY = 0.05; // For very dimmed edges stronger dimming
   const DEFAULT_NODE_TEXT_COLOR = '#333333'; // Standard dark gray for node text
   // Define edge color constants
   const DIM_PREREQ_COLOR = {
@@ -140,45 +141,115 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function handleCategoryFilterChange() {
     const selectedCategory = categoryFilterSelect.value;
-    const normalOpacity = 1.0;
-    const dimOpacity = DIMMED_OPACITY; // Dim enough to see, but clearly de-emphasized
 
+    // 1. Clear any existing click-based highlights
+    selectedForHighlighting_NodeIds.clear();
+
+    // 2. Update all nodes based on the selected category
     const allGraphNodes = allNodesDataSet.get({ returnType: "Array" });
-    const nodesToUpdate = [];
+    const nodesToUpdate = allGraphNodes.map(node => {
+      let newOpacity;
+      let newFontColor;
+      let newFontStrokeWidth;
+      let newNodeBorderWidth;
 
-    allGraphNodes.forEach((node) => {
-      let newOpacity = normalOpacity;
-      if (selectedCategory === "all") {
-        newOpacity = normalOpacity;
-        if (nodeGroupConfig && nodeGroupConfig.font && nodeGroupConfig.font.color) {
-          newFontColor = nodeGroupConfig.font.color; // Use group-specific color if defined
-        } else {
-          // Otherwise, use the global default node text color
-          newFontColor = (network && network.options && network.options.nodes && network.options.nodes.font && network.options.nodes.font.color) ? network.options.nodes.font.color : DEFAULT_NODE_TEXT_COLOR;
+      // --- Determine default/group specific visual properties ---
+      const defaultNodeOptions = (network && network.options && network.options.nodes) ? network.options.nodes : {};
+      const defaultFontOptions = defaultNodeOptions.font || {};
+      
+      let fontProperties = {
+        size: defaultFontOptions.size || 12,
+        face: defaultFontOptions.face || "Arial",
+        bold: defaultFontOptions.bold !== undefined ? defaultFontOptions.bold : true,
+        strokeWidth: defaultFontOptions.strokeWidth !== undefined ? defaultFontOptions.strokeWidth : 1,
+        strokeColor: defaultFontOptions.strokeColor || DEFAULT_NODE_TEXT_COLOR,
+        color: DEFAULT_NODE_TEXT_COLOR // Base color, will be refined
+      };
+      let nodeBorderWidthProperty = defaultNodeOptions.borderWidth !== undefined ? defaultNodeOptions.borderWidth : 1;
+
+      const nodeGroupConfig = node.group && network.groups.groups && network.groups.groups[node.group] ? network.groups.groups[node.group] : null;
+      if (nodeGroupConfig) {
+        if (nodeGroupConfig.font) {
+          if (nodeGroupConfig.font.size) fontProperties.size = nodeGroupConfig.font.size;
+          if (nodeGroupConfig.font.face) fontProperties.face = nodeGroupConfig.font.face;
+          if (nodeGroupConfig.font.bold !== undefined) fontProperties.bold = nodeGroupConfig.font.bold;
+          if (nodeGroupConfig.font.strokeWidth !== undefined) fontProperties.strokeWidth = nodeGroupConfig.font.strokeWidth;
+          if (nodeGroupConfig.font.strokeColor) fontProperties.strokeColor = nodeGroupConfig.font.strokeColor;
+          if (nodeGroupConfig.font.color) fontProperties.color = nodeGroupConfig.font.color; // Group-specific text color
+          if (nodeGroupConfig.font.multi !== undefined) fontProperties.multi = nodeGroupConfig.font.multi;
+          if (nodeGroupConfig.font.align !== undefined) fontProperties.align = nodeGroupConfig.font.align;
         }
-      } else {
-        // Check if the node's group matches the selected category.
-        // The 'group' property is set in addRequirementGraphElements and generateGraphElements.
-        if (node.group === selectedCategory) {
-          newOpacity = normalOpacity;
-          if (nodeGroupConfig && nodeGroupConfig.font && nodeGroupConfig.font.color) {
-            newFontColor = nodeGroupConfig.font.color; // Use group-specific color
-          } else {
-            newFontColor = (network && network.options && network.options.nodes && network.options.nodes.font && network.options.nodes.font.color) ? network.options.nodes.font.color : DEFAULT_NODE_TEXT_COLOR;
-          }
-        } else {
-          newOpacity = dimOpacity;
-          newFontColor = DIMMED_TEXT_COLOR;
-        }
+        if (nodeGroupConfig.borderWidth !== undefined) nodeBorderWidthProperty = nodeGroupConfig.borderWidth;
       }
-      fontProperties.color = newFontColor; // Set the determined color
 
-      nodesToUpdate.push({ id: node.id, opacity: newOpacity, font: fontProperties });
+      // --- Apply category filter logic ---
+      const isNodeInSelectedCategory = (selectedCategory === "all" || node.group === selectedCategory);
+
+      if (isNodeInSelectedCategory) {
+        newOpacity = 1;
+        newFontColor = fontProperties.color; // Use its normal/group color
+        newFontStrokeWidth = fontProperties.strokeWidth; // Use its normal/group stroke
+        newNodeBorderWidth = nodeBorderWidthProperty; // Use its normal/group border
+      } else { // Node is filtered out by category dropdown
+        newOpacity = VERY_DIMMED_OPACITY;
+        newFontColor = VERY_DIMMED_TEXT_COLOR;
+        newFontStrokeWidth = 0;
+        newNodeBorderWidth = 0;
+      }
+      
+      fontProperties.color = newFontColor;
+      fontProperties.strokeWidth = newFontStrokeWidth;
+
+      return { id: node.id, opacity: newOpacity, font: fontProperties, borderWidth: newNodeBorderWidth };
     });
 
     if (nodesToUpdate.length > 0) {
       allNodesDataSet.update(nodesToUpdate);
     }
+
+    // 3. Update all edges based on the visibility of their connected nodes
+    // Get the latest state of nodes AFTER the above update to correctly determine visibility
+    const updatedNodesCurrentState = allNodesDataSet.get({ returnType: "Array" });
+    const visibleNodeIds = new Set();
+    updatedNodesCurrentState.forEach(node => {
+      // A node is considered visible if its opacity is not the VERY_DIMMED_OPACITY
+      if (node.opacity !== VERY_DIMMED_OPACITY) { 
+        visibleNodeIds.add(node.id);
+      }
+    });
+
+    const allEdges = allEdgesDataSet.get({ returnType: "Array" });
+    const edgesToUpdate = allEdges.map(edge => {
+      const fromNodeVisible = visibleNodeIds.has(edge.from);
+      const toNodeVisible = visibleNodeIds.has(edge.to);
+      
+      let edgeColorToSet = null; // Default: Vis.js will use options.edges.color or its internal default
+      let edgeOpacityToSet = null; // Default: Vis.js will use 1
+
+      if (fromNodeVisible && toNodeVisible) {
+        // Edge is fully visible, use default appearance
+        edgeColorToSet = null; 
+        edgeOpacityToSet = null;
+      } else {
+        // One or both connected nodes are dimmed, so dim the edge
+        const baseEdgeColor = (network.options.edges.color && typeof network.options.edges.color === 'string') ? network.options.edges.color : '#848484'; // Default edge color from options or Vis.js default
+        edgeColorToSet = { color: baseEdgeColor, opacity: VERY_DIMMED_EDGE_OPACITY };
+        // No need to set edgeOpacityToSet separately when color is an object with opacity
+      }
+      return {
+        id: edge.id,
+        color: edgeColorToSet,
+        // opacity: edgeOpacityToSet, // Not needed if color object contains opacity
+        width: null  // Use default width, or specify a thinner width for dimmed edges if desired
+      };
+    });
+
+    if (edgesToUpdate.length > 0) {
+      allEdgesDataSet.update(edgesToUpdate);
+    }
+
+    // Also, ensure the sidebar is cleared if no specific node is selected by this action
+    clearSidebar();
   }
 
   function handleCategorySuggestionClick(event) {
@@ -1008,8 +1079,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 3. Update node opacities, font colors, text strokes, and borders
+    const selectedCategory = categoryFilterSelect.value; // Get current category filter
     const allNodes = allNodesDataSet.get({ returnType: "Array" });
-    let nodesToUpdate = allNodes.map((node) => {
+  
+    let nodesToUpdate = allNodes.map(node => {
       let newOpacity;
       let newFontColor;
       let newFontStrokeWidth;
@@ -1023,10 +1096,11 @@ document.addEventListener("DOMContentLoaded", () => {
         size: defaultFontOptions.size || 12,
         face: defaultFontOptions.face || "Arial",
         bold: defaultFontOptions.bold !== undefined ? defaultFontOptions.bold : true,
-        strokeWidth: defaultFontOptions.strokeWidth !== undefined ? defaultFontOptions.strokeWidth : 1, // Default text stroke
-        strokeColor: defaultFontOptions.strokeColor || DEFAULT_NODE_TEXT_COLOR
+        strokeWidth: defaultFontOptions.strokeWidth !== undefined ? defaultFontOptions.strokeWidth : 1,
+        strokeColor: defaultFontOptions.strokeColor || DEFAULT_NODE_TEXT_COLOR,
+        color: DEFAULT_NODE_TEXT_COLOR // Base color, will be refined
       };
-      let nodeBorderWidthProperty = defaultNodeOptions.borderWidth !== undefined ? defaultNodeOptions.borderWidth : 1; // Default node border
+      let nodeBorderWidthProperty = defaultNodeOptions.borderWidth !== undefined ? defaultNodeOptions.borderWidth : 1;
 
       const nodeGroupConfig = node.group && network.groups.groups && network.groups.groups[node.group] ? network.groups.groups[node.group] : null;
       if (nodeGroupConfig) {
@@ -1036,33 +1110,45 @@ document.addEventListener("DOMContentLoaded", () => {
           if (nodeGroupConfig.font.bold !== undefined) fontProperties.bold = nodeGroupConfig.font.bold;
           if (nodeGroupConfig.font.strokeWidth !== undefined) fontProperties.strokeWidth = nodeGroupConfig.font.strokeWidth;
           if (nodeGroupConfig.font.strokeColor) fontProperties.strokeColor = nodeGroupConfig.font.strokeColor;
+          if (nodeGroupConfig.font.color) fontProperties.color = nodeGroupConfig.font.color; // Group-specific text color
           if (nodeGroupConfig.font.multi !== undefined) fontProperties.multi = nodeGroupConfig.font.multi;
           if (nodeGroupConfig.font.align !== undefined) fontProperties.align = nodeGroupConfig.font.align;
         }
         if (nodeGroupConfig.borderWidth !== undefined) nodeBorderWidthProperty = nodeGroupConfig.borderWidth;
       }
-      // Initial font color from group or default, to be potentially overridden by highlight/dim logic
-      fontProperties.color = (nodeGroupConfig && nodeGroupConfig.font && nodeGroupConfig.font.color) ? nodeGroupConfig.font.color : DEFAULT_NODE_TEXT_COLOR;
+      // At this point, fontProperties.color and .strokeWidth, and nodeBorderWidthProperty hold the "normal" values for the node.
 
-      // --- Apply highlighting/dimming logic ---
-      if (selectedForHighlighting_NodeIds.size === 0) { // Case 1: Nothing selected, all nodes default
-        newOpacity = 1;
-        newFontColor = fontProperties.color; // Use the determined default/group color
-        newFontStrokeWidth = fontProperties.strokeWidth; // Use default/group text stroke
-        newNodeBorderWidth = nodeBorderWidthProperty; // Use default/group node border
-      } else { // Case 2: Nodes are selected for highlighting
-        if (nodesToFullyHighlight.has(node.id)) { // This node is part of the highlighted set
+      // --- Apply category filter and click-highlighting logic ---
+      const isNodeInSelectedCategory = (selectedCategory === "all" || node.group === selectedCategory);
+      const isAnyNodeClickSelected = selectedForHighlighting_NodeIds.size > 0;
+      const isNodePartOfClickHighlight = isAnyNodeClickSelected && nodesToFullyHighlight.has(node.id);
+
+      if (!isNodeInSelectedCategory) { // Node is filtered out by category dropdown
+        newOpacity = VERY_DIMMED_OPACITY;
+        newFontColor = VERY_DIMMED_TEXT_COLOR;
+        newFontStrokeWidth = 0;
+        newNodeBorderWidth = 0;
+      } else { // Node is part of the selected category (or category is "all")
+        if (isAnyNodeClickSelected) { // Some nodes have been click-selected
+          if (isNodePartOfClickHighlight) { // This node is part of the current click-highlight path
+            newOpacity = 1;
+            newFontColor = fontProperties.color; // Use its normal/group color
+            newFontStrokeWidth = fontProperties.strokeWidth; // Use its normal/group stroke
+            newNodeBorderWidth = nodeBorderWidthProperty; // Use its normal/group border
+          } else { // In category, but not part of click-highlight path - dim it
+            newOpacity = VERY_DIMMED_OPACITY;
+            newFontColor = VERY_DIMMED_TEXT_COLOR;
+            newFontStrokeWidth = 0;
+            newNodeBorderWidth = 0;
+          }
+        } else { // No nodes are click-selected; category filter is primary control
           newOpacity = 1;
-          newFontColor = fontProperties.color; // Use default/group color
-          newFontStrokeWidth = fontProperties.strokeWidth; // Use default/group text stroke
-          newNodeBorderWidth = nodeBorderWidthProperty; // Use default/group node border
-        } else { // This node is not highlighted, so it's dimmed
-          newOpacity = VERY_DIMMED_OPACITY;
-          newFontColor = VERY_DIMMED_TEXT_COLOR;
-          newFontStrokeWidth = 0; // Remove text stroke for dimmed nodes
-          newNodeBorderWidth = 0; // Remove node border for dimmed nodes
+          newFontColor = fontProperties.color; // Use its normal/group color
+          newFontStrokeWidth = fontProperties.strokeWidth; // Use its normal/group stroke
+          newNodeBorderWidth = nodeBorderWidthProperty; // Use its normal/group border
         }
       }
+      
       fontProperties.color = newFontColor;
       fontProperties.strokeWidth = newFontStrokeWidth;
 
