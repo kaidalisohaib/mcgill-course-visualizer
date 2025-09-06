@@ -111,7 +111,7 @@ Follow these instructions to set up and run the project locally.
 
 1.  **Clone the repository:**
     ```sh
-    git clone https://github.com/your-username/mcgill-course-visualizer.git
+    git clone https://github.com/kaidalisohaib/mcgill-course-visualizer.git
     cd mcgill-course-visualizer
     ```
 2.  **Set up a Python virtual environment:**
