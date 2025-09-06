@@ -10,8 +10,8 @@
 
 This tool transforms McGill's static, text-based course catalogue into a dynamic and intuitive interactive graph, allowing students and advisors to easily explore course dependencies, program requirements, and academic pathways.
 
-![](./assets/big.png)
-![](./assets/zoomed.png)
+![](https://raw.githubusercontent.com/kaidalisohaib/mcgill-course-visualizer/refs/heads/main/assets/big.png)
+![](https://raw.githubusercontent.com/kaidalisohaib/mcgill-course-visualizer/refs/heads/main/assets/zoomed.png)
 
 ---
 
